@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analysis - Insight Extractor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body class="slide-in-left bg-gray-50 min-h-screen font-inter flex flex-col">
+
+    <!-- Navbar -->
+    {% include 'navbar.html' %}
+
+    <button id="btn-share" class="absolute top-24 right-4 px-4 py-2 bg-gray-900/90 backdrop-blur-md text-white text-sm font-bold rounded-xl shadow-lg hover:scale-105 transition-transform flex items-center gap-2 z-50 border border-gray-700">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+        <span id="share-text">Share Link</span>
+    </button>
+
+    <div class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex-grow">
+        
+        <!-- Tab Navigation -->
+        <div class="flex space-x-2 bg-black p-3 rounded-xl mb-6 overflow-x-auto custom-scrollbar shadow-lg">
+            <button id="tab-summary" class="tab-btn rounded-lg whitespace-nowrap px-4 py-2 font-bold text-white bg-gray-800 transition-all">Summary & Insights</button>
+            <button id="tab-chat" class="tab-btn rounded-lg whitespace-nowrap px-4 py-2 font-medium text-gray-400 hover:text-white hover:bg-gray-800 transition-all">Q&A Chat</button>
+            <button id="tab-mcq" class="tab-btn rounded-lg whitespace-nowrap px-4 py-2 font-medium text-gray-400 hover:text-white hover:bg-gray-800 transition-all">MCQ Quiz</button>
+            <button id="tab-mindmap" class="tab-btn rounded-lg whitespace-nowrap px-4 py-2 font-medium text-gray-400 hover:text-white hover:bg-gray-800 transition-all">Mind Map</button>
+            <button id="tab-flashcards" class="tab-btn rounded-lg whitespace-nowrap px-4 py-2 font-medium text-gray-400 hover:text-white hover:bg-gray-800 transition-all">Flashcards</button>
+        </div>
+
+        <!-- Summary & Insights View -->
+        <div id="view-summary" class="view-panel space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-6 flex gap-4 items-center">
+                <span class="text-sm font-medium text-gray-500">Summary Detail Level:</span>
+                <select id="summary-size" class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-emerald-500 focus:border-emerald-500 outline-none">
+                    <option value="small">Short (Concise)</option>
+                    <option value="medium" selected>Medium (Standard)</option>
+                    <option value="large">Large (Comprehensive)</option>
+                </select>
+                <button id="btn-summarize" class="ml-auto px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 hover:scale-105 active:scale-95 text-white text-sm font-medium rounded-lg shadow-md transition-all duration-200 flex items-center gap-2">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    Generate Insights
+                </button>
+            </div>
+
+            <div id="summary-loader" class="hidden p-12 flex justify-center items-center flex-col gap-4 bg-white rounded-2xl shadow-sm border border-gray-100">
+                <div class="spinner"></div>
+                <p class="text-emerald-600 font-medium animate-pulse">Analyzing document... this may take a few seconds.</p>
+            </div>
+
+            <div id="summary-content" class="hidden grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Summary Text Section -->
+                <div class="lg:col-span-2 bg-gradient-to-br from-emerald-50 to-white p-8 rounded-2xl shadow-sm border border-emerald-100">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+                        <h3 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                            <svg class="h-6 w-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            Main Summary
+                        </h3>
+                        <div class="flex gap-2">
+                            <span class="text-xs text-gray-400 self-center hidden sm:inline mr-1">Download:</span>
+                            <button onclick="downloadSummary('pdf')" class="px-3 py-1 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold uppercase rounded border border-red-200 transition-colors">PDF</button>
+                            <button onclick="downloadSummary('docx')" class="px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold uppercase rounded border border-blue-200 transition-colors">Word</button>
+                            <button onclick="downloadSummary('txt')" class="px-3 py-1 bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-bold uppercase rounded border border-gray-200 transition-colors">Text</button>
+                        </div>
+                    </div>
+                    <div id="out-summary" class="prose max-w-none text-gray-700 leading-relaxed text-sm"></div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">Context</h3>
+                    <div id="out-context" class="text-gray-600 text-sm"></div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">Methodology</h3>
+                    <div id="out-methodology" class="text-gray-600 text-sm"></div>
+                </div>
+
+                <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">Key Features</h3>
+                    <div id="out-features" class="text-gray-600 text-sm"></div>
+                </div>
+
+                <div class="bg-green-50 p-6 rounded-2xl shadow-sm border border-green-100">
+                    <h3 class="text-lg font-bold text-green-900 mb-2">Advantages</h3>
+                    <div id="out-advantages" class="text-green-800 text-sm"></div>
+                </div>
+
+                <div class="bg-red-50 p-6 rounded-2xl shadow-sm border border-red-100">
+                    <h3 class="text-lg font-bold text-red-900 mb-2">Disadvantages</h3>
+                    <div id="out-disadvantages" class="text-red-800 text-sm"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat View -->
+        <div id="view-chat" class="view-panel hidden flex flex-col h-[600px] bg-white glass-panel rounded-2xl shadow-lg border border-emerald-100 overflow-hidden relative">
+            <div id="chat-history" class="flex-grow p-6 overflow-y-auto space-y-6 bg-gray-50/50 custom-scrollbar">
+                <div class="text-center text-sm text-gray-400 mt-4">Ask any question about your document!</div>
+            </div>
+            
+            <div class="p-4 bg-white border-t border-gray-100">
+                <form id="chat-form" class="flex gap-2 relative">
+                    <input type="text" id="chat-input" required class="flex-grow px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all outline-none text-sm pr-12" placeholder="Message the document...">
+                    <button type="submit" class="absolute right-2 top-2 p-2 bg-emerald-600 hover:bg-emerald-700 hover:scale-110 active:scale-95 text-white border border-transparent hover:shadow-md rounded-lg transition-all duration-200">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                    </button>
+                </form>
+            </div>
+            
+            <div id="chat-loader" class="hidden absolute bottom-20 left-6 text-sm text-emerald-600 font-medium flex items-center gap-2">
+                <div class="spinner !border-t-emerald-500 !w-4 !h-4 border-2"></div> AI is typing...
+            </div>
+        </div>
+
+        <!-- MCQ View -->
+        <div id="view-mcq" class="view-panel hidden">
+            <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900">Knowledge Check Quiz</h2>
+                        <p class="text-sm text-gray-500 mt-1">Test your understanding of the document.</p>
+                    </div>
+                    <button id="btn-generate-mcq" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-medium rounded-lg text-sm transition-colors shadow-sm">
+                        Generate New Quiz
+                    </button>
+                </div>
+
+                <div id="mcq-loader" class="hidden p-12 text-center text-cyan-600 font-medium flex-col items-center justify-center gap-3">
+                    <div class="spinner !border-t-cyan-600"></div> Generating questions...
+                </div>
+
+                <div id="mcq-content" class="hidden space-y-8">
+                    <form id="mcq-form" class="space-y-6">
+                        <!-- Filled by JS -->
+                    </form>
+                    <div class="border-t border-gray-100 pt-6 flex justify-between items-center">
+                        <button id="btn-submit-mcq" form="mcq-form" class="px-6 py-2 bg-green-600 hover:bg-green-700 hover:-translate-y-1 hover:shadow-lg active:scale-95 text-white font-bold rounded-xl shadow-md transition-all duration-200 hidden">Submit Answers</button>
+                        <div id="mcq-score" class="text-xl font-bold text-emerald-600 hidden"></div>
+                    </div>
+                </div>
+                <div id="score-history-container" class="mt-8 pt-8 border-t border-gray-200 hidden">
+                    <h3 class="text-xl font-bold text-gray-900 mb-4">Past Test Scores</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div class="bg-emerald-50 rounded-xl p-4 border border-emerald-100">
+                            <p class="text-sm font-medium text-emerald-600 mb-1">Total Attempts</p>
+                            <p id="stat-attempts" class="text-2xl font-bold text-emerald-900">0</p>
+                        </div>
+                        <div class="bg-green-50 rounded-xl p-4 border border-green-100">
+                            <p class="text-sm font-medium text-green-600 mb-1">Average Score</p>
+                            <p id="stat-avg" class="text-2xl font-bold text-green-900">0%</p>
+                        </div>
+                        <div class="bg-cyan-50 rounded-xl p-4 border border-cyan-100">
+                            <p class="text-sm font-medium text-cyan-600 mb-1">Best Score</p>
+                            <p id="stat-best" class="text-2xl font-bold text-cyan-900">0%</p>
+                        </div>
+                    </div>
+                    <div class="max-h-60 overflow-y-auto custom-scrollbar border rounded-lg">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50 sticky top-0">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
+                                </tr>
+                            </thead>
+                            <tbody id="score-history-list" class="bg-white divide-y divide-gray-200">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mind Map View -->
+        <div id="view-mindmap" class="view-panel hidden bg-white p-6 rounded-2xl shadow-sm border border-emerald-100 flex flex-col items-center min-h-[1200px]">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6 self-start">Visual Mind Map</h2>
+            <style>
+                #mermaid-container svg { width: 100%; height: auto; min-height: 800px; max-width: none !important; }
+            </style>
+            <div id="mermaid-container" class="w-full h-full flex justify-center items-center overflow-auto custom-scrollbar bg-gray-50/50 rounded-xl border border-gray-100 p-2">
+                <div class="text-gray-400 italic">Generate insights first to view the Mind Map.</div>
+            </div>
+        </div>
+
+        <!-- Flashcards View -->
+        <div id="view-flashcards" class="view-panel hidden">
+            <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 min-h-[500px] flex flex-col relative">
+                <div class="flex justify-between items-center mb-8 flex-wrap gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900">Study Flashcards</h2>
+                        <p class="text-sm text-gray-500 mt-1">Click cards to flip them. Great for active recall.</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button id="btn-generate-flashcards" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg text-sm transition-colors shadow-sm">
+                            Generate Cards
+                        </button>
+                        <a href="/api/download/csv/flashcards/{{ doc_id }}" id="btn-export-csv" class="hidden px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg text-sm transition-colors shadow-sm">
+                            Export to CSV
+                        </a>
+                    </div>
+                </div>
+
+                <div id="flashcards-loader" class="hidden p-12 text-center text-emerald-600 font-medium flex-col items-center justify-center gap-3">
+                    <div class="spinner !border-t-emerald-600"></div> Extracting key concepts...
+                </div>
+
+                <div id="flashcards-content" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Injected via JS -->
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const docId = {{ doc_id }};
+            const converter = new showdown.Converter();
+            mermaid.initialize({ startOnLoad: false, theme: 'default' });
+            
+            // UI Tabs Logic
+            const tabs = ['summary', 'chat', 'mcq', 'mindmap', 'flashcards'];
+            tabs.forEach(tab => {
+                document.getElementById(`tab-${tab}`).addEventListener('click', (e) => {
+                    // Reset all
+                    tabs.forEach(t => {
+                        const el = document.getElementById(`tab-${t}`);
+                        el.classList.remove('text-white', 'bg-gray-800', 'font-bold');
+                        el.classList.add('text-gray-400', 'font-medium');
+                        document.getElementById(`view-${t}`).classList.add('hidden');
+                    });
+                    // Set active
+                    e.target.classList.remove('text-gray-400', 'font-medium');
+                    e.target.classList.add('text-white', 'bg-gray-800', 'font-bold');
+                    document.getElementById(`view-${tab}`).classList.remove('hidden');
+                    
+                    if (tab === 'chat') loadChat();
+                    if (tab === 'mcq' && mcqData.length === 0) loadMcq(false);
+                    if (tab === 'flashcards' && flashcardsData.length === 0) loadFlashcards(false);
+                    if (tab === 'mindmap') {
+                        const mContainer = document.getElementById('mermaid-container');
+                        if(mContainer.querySelector('.mermaid') && !mContainer.querySelector('svg')) {
+                            mermaid.init(undefined, mContainer.querySelectorAll('.mermaid'));
+                        }
+                    }
+                });
+            });
+
+            // --- 1. Summary Logic ---
+            const btnSummarize = document.getElementById('btn-summarize');
+            const summarySize = document.getElementById('summary-size');
+            const sumLoader = document.getElementById('summary-loader');
+            const sumContent = document.getElementById('summary-content');
+
+            async function fetchSummary() {
+                sumLoader.classList.remove('hidden');
+                sumContent.classList.add('hidden');
+                btnSummarize.disabled = true;
+
+                try {
+                    const res = await fetch(`/api/summarize/${docId}`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({size: summarySize.value})
+                    });
+                    const data = await res.json();
+                    
+                    if(data.error) throw new Error(data.error);
+
+                    document.getElementById('out-summary').innerHTML = converter.makeHtml(data.summary_text);
+                    document.getElementById('out-context').innerHTML = converter.makeHtml(data.context);
+                    document.getElementById('out-methodology').innerHTML = converter.makeHtml(data.methodology);
+                    document.getElementById('out-features').innerHTML = converter.makeHtml(data.key_features);
+                    document.getElementById('out-advantages').innerHTML = converter.makeHtml(data.advantages);
+                    document.getElementById('out-disadvantages').innerHTML = converter.makeHtml(data.disadvantages);
+
+                    // Generate Visual Mind Map dynamically
+                    let mCode = `graph TD\n  Root("Document Analysis")\n`;
+                    mCode += `  classDef contextNode fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0c4a6e;\n`;
+                    mCode += `  classDef methodNode fill:#fdf4ff,stroke:#c026d3,stroke-width:2px,color:#701a75;\n`;
+                    mCode += `  classDef featNode fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#92400e;\n`;
+                    mCode += `  classDef advNode fill:#dcfce7,stroke:#15803d,stroke-width:2px,color:#14532d;\n`;
+                    mCode += `  classDef disNode fill:#fee2e2,stroke:#b91c1c,stroke-width:2px,color:#7f1d1d;\n`;
+                    mCode += `  classDef rootNode fill:#f3f4f6,stroke:#4b5563,stroke-width:3px,color:#1f2937,font-weight:bold;\n`;
+                    mCode += `  class Root rootNode;\n`;
+                    
+                    function parseBullets(text, parentId, parentLabel, prefix, colorClass) {
+                        if (!text || text === "N/A" || text.trim() === "") return "";
+                        let lines = text.split(/\\n|\n/).filter(l => l.trim().startsWith('-'));
+                        let code = `  Root --> ${parentId}("${parentLabel}"):::${colorClass}\n`;
+                        if (lines.length === 0) return code;
+                        
+                        lines.forEach((l, i) => {
+                            let clean = l.replace(/^-/, '').trim().replace(/["()]/g, '');
+                            if (clean.length > 35) clean = clean.substring(0, 35) + "...";
+                            let id = `${prefix}_${i}`;
+                            code += `  ${parentId} --> ${id}("${clean}"):::${colorClass}\n`;
+                        });
+                        return code;
+                    }
+
+                    mCode += parseBullets(data.context, 'C', 'Context', 'c', 'contextNode');
+                    mCode += parseBullets(data.methodology, 'M', 'Methodology', 'm', 'methodNode');
+                    mCode += parseBullets(data.key_features, 'F', 'Key Features', 'f', 'featNode');
+                    mCode += parseBullets(data.advantages, 'A', 'Advantages', 'a', 'advNode');
+                    mCode += parseBullets(data.disadvantages, 'D', 'Disadvantages', 'd', 'disNode');
+
+                    if (mCode === `graph TD\n  Root("Document Analysis")\n`) {
+                        mCode += `  Root --> Empty("No detailed insights available")\n`;
+                    }
+
+                    const mContainer = document.getElementById('mermaid-container');
+                    mContainer.innerHTML = `<div class="mermaid">${mCode}</div>`;
+                    
+                    // If the mindmap tab is already active, init immediately
+                    if (!document.getElementById('view-mindmap').classList.contains('hidden')) {
+                        mermaid.init(undefined, mContainer.querySelectorAll('.mermaid'));
+                    }
+
+                    sumContent.classList.remove('hidden');
+                } catch(e) {
+                    alert("Error fetching summary: " + e.message);
+                } finally {
+                    sumLoader.classList.add('hidden');
+                    btnSummarize.disabled = false;
+                }
+            }
+
+            window.downloadSummary = function(format) {
+                const size = summarySize.value;
+                window.location.href = `/api/download/${format}/${docId}?size=${size}`;
+            };
+
+            btnSummarize.addEventListener('click', fetchSummary);
+            // Fetch standard summary on load
+            fetchSummary();
+
+
+            // --- 2. Chat Logic ---
+            const chatForm = document.getElementById('chat-form');
+            const chatInput = document.getElementById('chat-input');
+            const chatHistory = document.getElementById('chat-history');
+            const chatLoader = document.getElementById('chat-loader');
+
+            function addMessage(role, text) {
+                const div = document.createElement('div');
+                const isUser = role === 'user';
+                div.className = `flex ${isUser ? 'justify-end' : 'justify-start'} mb-4 animate-fade-in-up`;
+                div.innerHTML = `
+                    <div class="max-w-[75%] rounded-2xl px-5 py-3 text-sm transition-all duration-300 hover:shadow-md ${isUser ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-sm' : 'bg-white glass-panel text-gray-800 shadow-sm'}">
+                        ${isUser ? text : converter.makeHtml(text)}
+                    </div>
+                `;
+                chatHistory.appendChild(div);
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+            }
+
+            async function loadChat() {
+                if(chatHistory.children.length > 1) return; // Already loaded
+                const res = await fetch(`/api/chat/${docId}`);
+                const data = await res.json();
+                if(data.chats && data.chats.length > 0) {
+                    chatHistory.innerHTML = "";
+                    data.chats.forEach(c => addMessage(c.role, c.message));
+                }
+            }
+
+            chatForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const msg = chatInput.value.trim();
+                if(!msg) return;
+
+                addMessage('user', msg);
+                chatInput.value = '';
+                chatLoader.classList.remove('hidden');
+
+                try {
+                    const res = await fetch(`/api/chat/${docId}`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({message: msg})
+                    });
+                    const data = await res.json();
+                    if(data.response) {
+                        addMessage('ai', data.response);
+                    }
+                } catch(err) {
+                    addMessage('ai', 'Error reaching server.');
+                } finally {
+                    chatLoader.classList.add('hidden');
+                }
+            });
+
+            // --- 3. MCQ Logic ---
+            let mcqData = [];
+            
+            async function loadMcq(forceGenerate = false) {
+                document.getElementById('mcq-content').classList.add('hidden');
+                document.getElementById('mcq-loader').classList.remove('hidden');
+                document.getElementById('mcq-score').classList.add('hidden');
+
+                const method = forceGenerate ? 'POST' : 'GET';
+                try {
+                    const res = await fetch(`/api/mcq/${docId}`, {method});
+                    const data = await res.json();
+                    if(data.mcqs && data.mcqs.length > 0) {
+                        mcqData = data.mcqs;
+                        renderMcq(mcqData);
+                        loadScores(); // Load scores whenever MCQs are displayed
+                    } else if (!forceGenerate) {
+                        loadMcq(true);
+                    }
+                } catch(e) {
+                    alert("Error loading MCQ.");
+                } finally {
+                    document.getElementById('mcq-loader').classList.add('hidden');
+                }
+            }
+
+            async function loadScores() {
+                try {
+                    const res = await fetch(`/api/mcq/score/${docId}`);
+                    const data = await res.json();
+                    const container = document.getElementById('score-history-container');
+                    const tbody = document.getElementById('score-history-list');
+                    
+                    if(data.scores && data.scores.length > 0) {
+                        container.classList.remove('hidden');
+                        let totalPercents = 0;
+                        let maxPercent = 0;
+                        
+                        tbody.innerHTML = '';
+                        data.scores.forEach(s => {
+                            const percent = Math.round((s.score / s.total) * 100);
+                            totalPercents += percent;
+                            if(percent > maxPercent) maxPercent = percent;
+                            
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${new Date(s.timestamp).toLocaleString()}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium ${percent >= 70 ? 'text-green-600' : 'text-orange-600'}">${s.score} / ${s.total} (${percent}%)</td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
+                        
+                        const avg = Math.round(totalPercents / data.scores.length);
+                        document.getElementById('stat-attempts').textContent = data.scores.length;
+                        document.getElementById('stat-avg').textContent = avg + "%";
+                        document.getElementById('stat-best').textContent = maxPercent + "%";
+                    } else {
+                        container.classList.add('hidden');
+                    }
+                } catch(e) { console.error("Could not load scores", e); }
+            }
+
+            document.getElementById('btn-generate-mcq').addEventListener('click', () => loadMcq(true));
+
+            function renderMcq(qs) {
+                const form = document.getElementById('mcq-form');
+                form.innerHTML = "";
+                qs.forEach((q, i) => {
+                    const qDiv = document.createElement('div');
+                    qDiv.className = "p-6 border border-gray-100 bg-gray-50/50 rounded-xl mcq-card";
+                    let optsHtml = "";
+                    q.options.forEach((opt, optIdx) => {
+                        optsHtml += `
+                            <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer transition-colors option-lbl">
+                                <input type="radio" name="q${i}" value="${optIdx}" class="text-emerald-600 focus:ring-emerald-500">
+                                <span class="text-sm font-medium text-gray-700">${opt}</span>
+                            </label>
+                        `;
+                    });
+                    qDiv.innerHTML = `
+                        <h4 class="font-bold text-gray-900 mb-4">${i+1}. ${q.question}</h4>
+                        <div class="space-y-3">${optsHtml}</div>
+                    `;
+                    form.appendChild(qDiv);
+                });
+                document.getElementById('mcq-content').classList.remove('hidden');
+                document.getElementById('btn-submit-mcq').classList.remove('hidden');
+            }
+
+            document.getElementById('mcq-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                let score = 0;
+                let answered = 0;
+                
+                mcqData.forEach((q, i) => {
+                    const selected = document.querySelector(`input[name="q${i}"]:checked`);
+                    const card = document.querySelectorAll('.mcq-card')[i];
+                    const labels = card.querySelectorAll('.option-lbl');
+                    
+                    if(selected) {
+                        answered++;
+                        const val = parseInt(selected.value);
+                        // reset styles
+                        labels.forEach(l => l.classList.replace('bg-green-100', 'bg-white'));
+                        labels.forEach(l => l.classList.replace('bg-red-100', 'bg-white'));
+
+                        if(val === q.answer) {
+                            score++;
+                            labels[val].classList.add('bg-green-100', 'border-green-300');
+                        } else {
+                            labels[val].classList.add('bg-red-100', 'border-red-300');
+                            labels[q.answer].classList.add('bg-green-100', 'border-green-300');
+                        }
+                    } else {
+                        labels[q.answer].classList.add('bg-green-100', 'border-green-300');
+                    }
+                });
+
+                const scoreText = `Score: ${score} / ${mcqData.length}`;
+                const scoreDiv = document.getElementById('mcq-score');
+                scoreDiv.textContent = scoreText;
+                scoreDiv.classList.remove('hidden');
+                
+                if (answered < mcqData.length) {
+                    alert(`You left ${mcqData.length - answered} questions unanswered. Graded anyway.`);
+                }
+                
+                // Submit score to backend
+                document.getElementById('btn-submit-mcq').textContent = "Saving...";
+                document.getElementById('btn-submit-mcq').disabled = true;
+                
+                fetch(`/api/mcq/score/${docId}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({score: score, total: mcqData.length})
+                }).then(() => {
+                    document.getElementById('btn-submit-mcq').textContent = "Submit Answers";
+                    document.getElementById('btn-submit-mcq').disabled = false;
+                    loadScores();
+                }).catch(() => {
+                    document.getElementById('btn-submit-mcq').textContent = "Submit Answers";
+                    document.getElementById('btn-submit-mcq').disabled = false;
+                });
+            });
+
+            // --- 4. Flashcards Logic ---
+            let flashcardsData = [];
+            const flLoader = document.getElementById('flashcards-loader');
+            const flContent = document.getElementById('flashcards-content');
+            const btnGenerateFl = document.getElementById('btn-generate-flashcards');
+            const btnExportCsv = document.getElementById('btn-export-csv');
+
+            async function loadFlashcards(forceGenerate = false) {
+                flContent.classList.add('hidden');
+                flLoader.classList.remove('hidden');
+                btnExportCsv.classList.add('hidden');
+
+                const method = forceGenerate ? 'POST' : 'GET';
+                try {
+                    const res = await fetch(`/api/flashcards/${docId}`, {method});
+                    const data = await res.json();
+                    if(data.flashcards && data.flashcards.length > 0) {
+                        flashcardsData = data.flashcards;
+                        renderFlashcards(flashcardsData);
+                        btnExportCsv.classList.remove('hidden');
+                    } else if (!forceGenerate) {
+                        loadFlashcards(true);
+                    }
+                } catch(e) {
+                    alert("Error loading flashcards.");
+                } finally {
+                    flLoader.classList.add('hidden');
+                }
+            }
+
+            btnGenerateFl.addEventListener('click', () => loadFlashcards(true));
+
+            function renderFlashcards(cards) {
+                flContent.innerHTML = "";
+                cards.forEach(c => {
+                    const div = document.createElement('div');
+                    let isFront = true;
+                    
+                    const updateCard = () => {
+                        div.className = isFront 
+                            ? "bg-gradient-to-br from-purple-50 to-white border border-purple-200 rounded-2xl p-6 shadow-sm cursor-pointer hover:shadow-md transition-all flex flex-col items-center justify-center min-h-[160px] text-center relative group"
+                            : "bg-gradient-to-br from-emerald-50 to-white border border-emerald-200 rounded-2xl p-6 shadow-sm cursor-pointer hover:shadow-md transition-all flex flex-col items-center justify-center min-h-[160px] text-center relative group";
+                            
+                        div.innerHTML = `
+                            <span class="text-xs uppercase font-bold tracking-wider mb-2 ${isFront ? 'text-purple-400' : 'text-emerald-500'}">${isFront ? 'Question' : 'Answer'}</span>
+                            <span class="font-medium ${isFront ? 'text-gray-800' : 'text-emerald-900'} pointer-events-none px-2">${isFront ? c.front : c.back}</span>
+                            <div class="absolute top-3 right-3 text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                            </div>
+                        `;
+                    };
+                    
+                    updateCard();
+                    div.addEventListener('click', () => {
+                        isFront = !isFront;
+                        updateCard();
+                    });
+                    flContent.appendChild(div);
+                });
+                flContent.classList.remove('hidden');
+            }
+
+            // --- 5. Share Logic ---
+            const btnShare = document.getElementById('btn-share');
+            if(btnShare) {
+                btnShare.addEventListener('click', async () => {
+                    const txtSpan = document.getElementById('share-text');
+                    const origTxt = txtSpan.textContent;
+                    txtSpan.textContent = "Generating...";
+                    try {
+                        const res = await fetch(`/api/share/${docId}`, {method: 'POST'});
+                        const data = await res.json();
+                        if(data.share_id) {
+                            const url = window.location.origin + "/share/" + data.share_id;
+                            if (navigator.clipboard && window.isSecureContext) {
+                                await navigator.clipboard.writeText(url);
+                            } else {
+                                const textArea = document.createElement("textarea");
+                                textArea.value = url;
+                                textArea.style.position = "fixed";
+                                document.body.appendChild(textArea);
+                                textArea.focus();
+                                textArea.select();
+                                document.execCommand('copy');
+                                document.body.removeChild(textArea);
+                            }
+                            txtSpan.textContent = "Copied to Clipboard!";
+                            setTimeout(() => txtSpan.textContent = origTxt, 3000);
+                        } else {
+                            throw new Error(data.error || "Failed to generate ID");
+                        }
+                    } catch(e) {
+                        alert("Sharing failed: " + e.message);
+                        txtSpan.textContent = origTxt;
+                    }
+                });
+            }
+
+        });
+    </script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% include 'tret_widget.html' %}
+</body>
+</html>

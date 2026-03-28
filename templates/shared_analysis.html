@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shared Analysis - Insight Extractor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body class="slide-in-left bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen font-inter flex flex-col relative">
+
+    <header class="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center shadow-lg shadow-emerald-200">
+                        <span class="text-white font-bold text-lg leading-none">IE</span>
+                    </div>
+                    <span class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 tracking-tight block">Insight Extractor <span class="text-xs bg-cyan-100 text-cyan-800 px-2 py-0.5 rounded-full uppercase ml-2">Public View</span></span>
+                </div>
+                <a href="/" class="text-sm font-bold text-emerald-600 hover:text-emerald-700 transition-colors">Create your own</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-5xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex-grow z-10">
+        
+        <h1 id="doc-title" class="text-3xl font-extrabold text-gray-900 mb-6 flex items-center gap-3">
+            <svg class="h-8 w-8 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            Loading Document...
+        </h1>
+
+        <!-- Tab Navigation -->
+        <div class="flex space-x-2 border-b border-gray-200 mb-6 pb-2 overflow-x-auto custom-scrollbar">
+            <button id="tab-summary" class="tab-btn whitespace-nowrap px-4 py-2 font-medium text-emerald-600 border-b-2 border-emerald-600 transition-colors">Summary & Insights</button>
+            <button id="tab-mindmap" class="tab-btn whitespace-nowrap px-4 py-2 font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 transition-colors">Mind Map</button>
+            <button id="tab-flashcards" class="tab-btn whitespace-nowrap px-4 py-2 font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 transition-colors">Flashcards</button>
+            <button id="tab-mcq" class="tab-btn whitespace-nowrap px-4 py-2 font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 transition-colors">MCQ Quiz</button>
+        </div>
+
+        <div id="loader" class="p-12 flex justify-center items-center flex-col gap-4 bg-white rounded-2xl shadow-sm border border-gray-100">
+            <div class="spinner"></div>
+            <p class="text-emerald-600 font-medium animate-pulse">Loading shared insights...</p>
+        </div>
+
+        <!-- Content Error -->
+        <div id="error-box" class="hidden p-8 bg-red-50 text-red-700 border border-red-200 rounded-2xl">
+            Could not load the shared document. The link may have expired or the user disabled sharing.
+        </div>
+
+        <!-- Summary & Insights View -->
+        <div id="view-summary" class="view-panel hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="lg:col-span-2 bg-gradient-to-br from-emerald-50 to-white p-8 rounded-2xl shadow-sm border border-emerald-100">
+                    <h3 class="text-xl font-bold text-gray-900 flex items-center gap-2 mb-4">
+                        <svg class="h-6 w-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Main Summary
+                    </h3>
+                    <div id="out-summary" class="prose max-w-none text-gray-700 leading-relaxed text-sm"></div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">Context</h3>
+                    <div id="out-context" class="text-gray-600 text-sm"></div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">Methodology</h3>
+                    <div id="out-methodology" class="text-gray-600 text-sm"></div>
+                </div>
+                <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">Key Features</h3>
+                    <div id="out-features" class="text-gray-600 text-sm"></div>
+                </div>
+                <div class="bg-green-50 p-6 rounded-2xl shadow-sm border border-green-100">
+                    <h3 class="text-lg font-bold text-green-900 mb-2">Advantages</h3>
+                    <div id="out-advantages" class="text-green-800 text-sm"></div>
+                </div>
+                <div class="bg-red-50 p-6 rounded-2xl shadow-sm border border-red-100">
+                    <h3 class="text-lg font-bold text-red-900 mb-2">Disadvantages</h3>
+                    <div id="out-disadvantages" class="text-red-800 text-sm"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mind Map View -->
+        <div id="view-mindmap" class="view-panel hidden bg-white p-6 rounded-2xl shadow-sm border border-emerald-100 flex flex-col items-center min-h-[500px]">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6 self-start">Visual Mind Map</h2>
+            <div id="mermaid-container" class="w-full h-full flex justify-center items-center overflow-auto custom-scrollbar bg-gray-50/50 rounded-xl border border-gray-100 p-8">
+                <!-- Mermaid Injected -->
+            </div>
+        </div>
+
+        <!-- Flashcards View -->
+        <div id="view-flashcards" class="view-panel hidden">
+            <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 min-h-[500px] flex flex-col relative">
+                <div class="mb-8">
+                    <h2 class="text-2xl font-bold text-gray-900">Study Flashcards</h2>
+                    <p class="text-sm text-gray-500 mt-1">Click cards to flip them. Great for active learning.</p>
+                </div>
+                <div id="flashcards-content" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Injected via JS -->
+                </div>
+                <div id="flashcards-empty" class="hidden text-gray-400 italic">No flashcards were generated for this document.</div>
+            </div>
+        </div>
+
+        <!-- MCQ Quiz View -->
+        <div id="view-mcq" class="view-panel hidden">
+            <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900">Knowledge Check (Self-Test)</h2>
+                        <p class="text-sm text-gray-500 mt-1">Take the quiz directly in your browser without logging in!</p>
+                    </div>
+                </div>
+
+                <div id="mcq-empty" class="hidden text-gray-400 italic mb-6">No quiz was generated for this document.</div>
+
+                <div id="mcq-content" class="space-y-8 hidden">
+                    <form id="mcq-form" class="space-y-6">
+                        <!-- Filled by JS -->
+                    </form>
+                    <div class="border-t border-gray-100 pt-6 flex justify-between items-center">
+                        <button id="btn-submit-mcq" form="mcq-form" class="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl shadow-md transition-all">Grade My Answers</button>
+                        <div id="mcq-score" class="text-xl font-bold text-emerald-600 hidden"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", async () => {
+            const shareId = "{{ share_id }}";
+            const converter = new showdown.Converter();
+            mermaid.initialize({ startOnLoad: false, theme: 'default' });
+            
+            // UI Tabs
+            const tabs = ['summary', 'mindmap', 'flashcards', 'mcq'];
+            tabs.forEach(tab => {
+                document.getElementById(`tab-${tab}`).addEventListener('click', (e) => {
+                    tabs.forEach(t => {
+                        document.getElementById(`tab-${t}`).classList.replace('text-emerald-600', 'text-gray-500');
+                        document.getElementById(`tab-${t}`).classList.replace('border-emerald-600', 'border-transparent');
+                        document.getElementById(`view-${t}`).classList.add('hidden');
+                    });
+                    e.target.classList.replace('text-gray-500', 'text-emerald-600');
+                    e.target.classList.replace('border-transparent', 'border-emerald-600');
+                    document.getElementById(`view-${tab}`).classList.remove('hidden');
+                    
+                    if (tab === 'mindmap') {
+                        const mContainer = document.getElementById('mermaid-container');
+                        if(mContainer.querySelector('.mermaid') && !mContainer.querySelector('svg')) {
+                            mermaid.init(undefined, mContainer.querySelectorAll('.mermaid'));
+                        }
+                    }
+                });
+            });
+
+            // Fetch Data
+            try {
+                const res = await fetch(`/api/public/data/${shareId}`);
+                const data = await res.json();
+                
+                if (data.error) {
+                    document.getElementById('error-box').classList.remove('hidden');
+                    document.getElementById('loader').classList.add('hidden');
+                    return;
+                }
+
+                document.getElementById('doc-title').innerHTML = `
+                    <svg class="h-8 w-8 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    Analysis: ${data.filename}
+                `;
+
+                // Render Summary
+                if (data.summary) {
+                    document.getElementById('out-summary').innerHTML = converter.makeHtml(data.summary.summary_text || "");
+                    document.getElementById('out-context').innerHTML = converter.makeHtml(data.summary.context || "");
+                    document.getElementById('out-methodology').innerHTML = converter.makeHtml(data.summary.methodology || "");
+                    document.getElementById('out-features').innerHTML = converter.makeHtml(data.summary.key_features || "");
+                    document.getElementById('out-advantages').innerHTML = converter.makeHtml(data.summary.advantages || "");
+                    document.getElementById('out-disadvantages').innerHTML = converter.makeHtml(data.summary.disadvantages || "");
+                } else {
+                    document.getElementById('out-summary').innerHTML = "<i>Summary not yet generated by the owner.</i>";
+                }
+
+                // Render Mindmap dynamically
+                if(data.summary) {
+                    let mCode = `graph TD\n  Root("Document Analysis")\n`;
+                    
+                    function parseBullets(text, parentId, parentLabel, prefix) {
+                        if (!text || text === "N/A" || text.trim() === "") return "";
+                        let lines = text.split(/\\n|\n/).filter(l => l.trim().startsWith('-'));
+                        let code = `  Root --> ${parentId}("${parentLabel}")\n`;
+                        if (lines.length === 0) return code;
+                        
+                        lines.forEach((l, i) => {
+                            let clean = l.replace(/^-/, '').trim().replace(/["()]/g, '');
+                            if (clean.length > 35) clean = clean.substring(0, 35) + "...";
+                            let id = `${prefix}_${i}`;
+                            code += `  ${parentId} --> ${id}("${clean}")\n`;
+                        });
+                        return code;
+                    }
+
+                    mCode += parseBullets(data.summary.context, 'C', 'Context', 'c');
+                    mCode += parseBullets(data.summary.methodology, 'M', 'Methodology', 'm');
+                    mCode += parseBullets(data.summary.key_features, 'F', 'Key Features', 'f');
+                    mCode += parseBullets(data.summary.advantages, 'A', 'Advantages', 'a');
+                    mCode += parseBullets(data.summary.disadvantages, 'D', 'Disadvantages', 'd');
+
+                    if (mCode === `graph TD\n  Root("Document Analysis")\n`) {
+                        mCode += `  Root --> Empty("No detailed insights available")\n`;
+                    }
+
+                    const mContainer = document.getElementById('mermaid-container');
+                    mContainer.innerHTML = `<div class="mermaid">${mCode}</div>`;
+                    if (!document.getElementById('view-mindmap').classList.contains('hidden')) {
+                        mermaid.init(undefined, mContainer.querySelectorAll('.mermaid'));
+                    }
+                }
+
+                // Render Flashcards
+                if (data.flashcards && data.flashcards.length > 0) {
+                    const flContent = document.getElementById('flashcards-content');
+                    data.flashcards.forEach(c => {
+                        const div = document.createElement('div');
+                        let isFront = true;
+                        const updateCard = () => {
+                            div.className = isFront 
+                                ? "bg-gradient-to-br from-purple-50 to-white border border-purple-200 rounded-2xl p-6 shadow-sm cursor-pointer transition-all flex flex-col items-center justify-center min-h-[160px] text-center relative"
+                                : "bg-gradient-to-br from-emerald-50 to-white border border-emerald-200 rounded-2xl p-6 shadow-sm cursor-pointer transition-all flex flex-col items-center justify-center min-h-[160px] text-center relative";
+                            div.innerHTML = `
+                                <span class="text-xs uppercase font-bold tracking-wider mb-2 ${isFront ? 'text-purple-400' : 'text-emerald-500'}">${isFront ? 'Question' : 'Answer'}</span>
+                                <span class="font-medium ${isFront ? 'text-gray-800' : 'text-emerald-900'} pointer-events-none px-2">${isFront ? c.front : c.back}</span>
+                            `;
+                        };
+                        updateCard();
+                        div.addEventListener('click', () => { isFront = !isFront; updateCard(); });
+                        flContent.appendChild(div);
+                    });
+                } else {
+                    document.getElementById('flashcards-empty').classList.remove('hidden');
+                }
+
+                // Render MCQs natively
+                let mcqData = data.mcqs || [];
+                if (mcqData.length > 0) {
+                    const form = document.getElementById('mcq-form');
+                    mcqData.forEach((q, i) => {
+                        const qDiv = document.createElement('div');
+                        qDiv.className = "p-6 border border-gray-100 bg-gray-50/50 rounded-xl mcq-card";
+                        let optsHtml = "";
+                        q.options.forEach((opt, optIdx) => {
+                            optsHtml += `
+                                <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer transition-colors option-lbl">
+                                    <input type="radio" name="q${i}" value="${optIdx}" class="text-emerald-600 focus:ring-emerald-500">
+                                    <span class="text-sm font-medium text-gray-700">${opt}</span>
+                                </label>
+                            `;
+                        });
+                        qDiv.innerHTML = `<h4 class="font-bold text-gray-900 mb-4">${i+1}. ${q.question}</h4><div class="space-y-3">${optsHtml}</div>`;
+                        form.appendChild(qDiv);
+                    });
+                    document.getElementById('mcq-content').classList.remove('hidden');
+                } else {
+                    document.getElementById('mcq-empty').classList.remove('hidden');
+                }
+
+                // MCQ Client submission
+                document.getElementById('mcq-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    let score = 0;
+                    mcqData.forEach((q, i) => {
+                        const selected = document.querySelector(`input[name="q${i}"]:checked`);
+                        const card = document.querySelectorAll('.mcq-card')[i];
+                        const labels = card.querySelectorAll('.option-lbl');
+                        if(selected) {
+                            const val = parseInt(selected.value);
+                            labels.forEach(l => l.classList.replace('bg-green-100', 'bg-white'));
+                            labels.forEach(l => l.classList.replace('bg-red-100', 'bg-white'));
+                            if(val === q.answer) {
+                                score++;
+                                labels[val].classList.add('bg-green-100', 'border-green-300');
+                            } else {
+                                labels[val].classList.add('bg-red-100', 'border-red-300');
+                                labels[q.answer].classList.add('bg-green-100', 'border-green-300');
+                            }
+                        } else {
+                            labels[q.answer].classList.add('bg-green-100', 'border-green-300');
+                        }
+                    });
+                    const scoreDiv = document.getElementById('mcq-score');
+                    scoreDiv.textContent = `Score: ${score} / ${mcqData.length}`;
+                    scoreDiv.classList.remove('hidden');
+                });
+
+                document.getElementById('loader').classList.add('hidden');
+                document.getElementById('view-summary').classList.remove('hidden'); // default tab
+
+            } catch(e) {
+                document.getElementById('error-box').classList.remove('hidden');
+                document.getElementById('loader').classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

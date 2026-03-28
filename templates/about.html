@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About Us - Insight Extractor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body class="slide-in-left bg-gray-50 min-h-screen font-inter flex flex-col">
+
+    <!-- Navigation -->
+    {% include 'navbar.html' %}
+
+    <main class="flex-grow pt-32 pb-12 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto space-y-8 animate-fade-in-up">
+        
+        <h1 class="text-4xl font-black text-gray-900 text-center tracking-tight">About Us</h1>
+        
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-gray-700 leading-relaxed text-lg">
+            <p class="mb-6">
+                Welcome to <span class="font-bold text-emerald-600">Insight Extractor</span>. We believe that reading long, tedious documents shouldn't take hours of your day. We built this tool to help researchers, students, and professionals extract deep insights instantly.
+            </p>
+            <p class="mb-6">
+                Powered by state-of-the-art AI technology from Google Gemini, Insight Extractor breaks down complicated PDFs, Word Docs, and text files into digestible pieces of information like Context, Methodology, Key Features, Advantages, and Disadvantages.
+            </p>
+            <p>
+                Not only can you summarize documents, but our interactive ecosystem lets you chat with your documents naturally, and automatically generate quizzes to test your knowledge retention.
+            </p>
+        </div>
+
+    </main>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% include 'tret_widget.html' %}
+</body>
+</html>

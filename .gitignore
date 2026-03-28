@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+bin/
+lib/
+include/
+.venv/
+app.db
+AiInsightExtractor/
+.DS_Store
+*.log
+static/uploads/

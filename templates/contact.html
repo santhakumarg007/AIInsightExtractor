@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact - Insight Extractor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body class="slide-in-left bg-gray-50 min-h-screen font-inter flex flex-col">
+
+    <!-- Navigation -->
+    {% include 'navbar.html' %}
+
+    <main class="flex-grow pt-32 pb-12 px-4 sm:px-6 lg:px-8 max-w-2xl mx-auto w-full space-y-8 animate-fade-in-up">
+        
+        <h1 class="text-4xl font-black text-gray-900 text-center tracking-tight">Contact Us</h1>
+        
+        <form class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 space-y-6">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Full Name</label>
+                <input type="text" class="mt-1 block w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all outline-none" placeholder="John Doe">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Email Address</label>
+                <input type="email" class="mt-1 block w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all outline-none" placeholder="you@example.com">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Message</label>
+                <textarea rows="4" class="mt-1 block w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all outline-none" placeholder="How can we help?"></textarea>
+            </div>
+            <button type="button" onclick="alert('Message sent successfully!')" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-md text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transform transition-all">
+                Send Message
+            </button>
+        </form>
+
+    </main>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% include 'tret_widget.html' %}
+</body>
+</html>

@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Insight Extractor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body class="slide-in-left bg-gradient-to-br from-pink-100 via-purple-100 to-sky-100 min-h-screen font-inter flex flex-col relative">
+
+    <!-- Navbar Minimal -->
+    {% include 'navbar.html' %}
+
+    <div class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex-grow">
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Upload Box -->
+            <div class="lg:col-span-2">
+                <div class="bg-gradient-to-br from-white/90 to-fuchsia-50/90 rounded-2xl shadow-xl shadow-fuchsia-200/50 border border-fuchsia-200 p-8 glass-panel relative z-10">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-2">Upload Document</h2>
+                    <p class="text-gray-500 mb-6">Upload a PDF, DOCX, or TXT file to extract insights.</p>
+                    
+                    <div id="drop-zone" class="border-2 border-dashed border-purple-300 rounded-2xl p-12 text-center bg-white/50 hover:bg-purple-50 transition-colors cursor-pointer relative group">
+                        <input type="file" id="file-upload" class="hidden" accept=".pdf,.txt,.docx">
+                        <svg class="mx-auto h-12 w-12 text-emerald-400 group-hover:text-emerald-600 transition-colors mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        <p class="text-gray-700 font-medium whitespace-pre-wrap"><span class="text-emerald-600">Click to upload</span> or drag and drop</p>
+                        <p class="text-xs text-gray-400 mt-2">PDF, DOCX, TXT up to 10MB</p>
+                    </div>
+
+                    <div id="upload-status" class="mt-4 hidden p-4 bg-emerald-50 rounded-xl flex items-center gap-3">
+                        <div class="spinner border-emerald-500 border-t-emerald-200"></div>
+                        <span class="text-emerald-700 font-medium">Extracting text, please wait...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Box -->
+            <div class="bg-gradient-to-br from-white/90 to-cyan-50/90 rounded-2xl shadow-xl shadow-cyan-200/50 border border-cyan-200 p-6 flex flex-col glass-panel relative z-10">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Recent Documents
+                    </h2>
+                    <button id="btn-compare" class="hidden px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-md transition-all">Compare Selected</button>
+                </div>
+                
+                <div id="docs-list" class="space-y-3 flex-grow custom-scrollbar overflow-y-auto max-h-[400px]">
+                    <div class="text-center text-gray-500 py-4 text-sm">Loading documents...</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            
+            // Logout is now natively handled by universal navbar.html interceptors
+
+            // Load Docs
+            async function loadDocs() {
+                const res = await fetch("/api/documents");
+                if (res.status === 401) {
+                    window.location.href = "/";
+                    return;
+                }
+                const data = await res.json();
+                const list = document.getElementById("docs-list");
+                list.innerHTML = "";
+                
+                if (!data.documents || data.documents.length === 0) {
+                    list.innerHTML = `<div class="text-center text-gray-500 py-4 text-sm">No documents uploaded yet.</div>`;
+                    return;
+                }
+                
+                data.documents.forEach(doc => {
+                    const el = document.createElement("div");
+                    el.className = "relative group";
+                    el.innerHTML = `
+                        <input type="checkbox" class="doc-compare-cb absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500 cursor-pointer z-10" value="${doc.id}" onchange="toggleCompareBtn()">
+                        <a href="/analysis/${doc.id}" class="block p-3 pl-10 rounded-xl border border-gray-100 hover:border-emerald-300 hover:bg-emerald-50 transition-all pr-12">
+                            <p class="text-sm font-medium text-gray-800 truncate group-hover:text-emerald-700">${doc.filename}</p>
+                            <p class="text-xs text-gray-400 mt-1">${new Date(doc.upload_date).toLocaleDateString()}</p>
+                        </a>
+                        <button onclick="deleteDoc(${doc.id}, this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" title="Delete">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                    `;
+                    list.appendChild(el);
+                });
+            }
+            loadDocs();
+
+            window.deleteDoc = async function(docId, btn) {
+                if(!confirm("Are you sure you want to permanently delete this document and all its AI insights?")) return;
+                
+                btn.innerHTML = '<div class="spinner border-red-500 border-t-red-200 h-4 w-4"></div>';
+                try {
+                    const res = await fetch(`/api/documents/${docId}`, { method: 'DELETE' });
+                    const data = await res.json();
+                    if(data.success) {
+                        btn.closest('.relative').remove();
+                        toggleCompareBtn(); // Recheck checkboxes after deletion
+                        const list = document.getElementById("docs-list");
+                        if(list.children.length === 0) {
+                            list.innerHTML = `<div class="text-center text-gray-500 py-4 text-sm">No documents uploaded yet.</div>`;
+                        }
+                    } else {
+                        alert(data.error || "Failed to delete document.");
+                        btn.innerHTML = "❌";
+                    }
+                } catch(e) {
+                    alert("Network error.");
+                    btn.innerHTML = "❌";
+                }
+            };
+
+            // Multi-Compare Logic
+            window.toggleCompareBtn = function() {
+                const checked = document.querySelectorAll('.doc-compare-cb:checked');
+                const btn = document.getElementById('btn-compare');
+                if (checked.length >= 2) {
+                    btn.classList.remove('hidden');
+                    btn.textContent = `Compare ${checked.length} Docs`;
+                } else {
+                    btn.classList.add('hidden');
+                }
+            };
+            
+            document.getElementById('btn-compare').addEventListener('click', async () => {
+                const checked = Array.from(document.querySelectorAll('.doc-compare-cb:checked')).map(cb => parseInt(cb.value));
+                if (checked.length < 2) return;
+                
+                const btn = document.getElementById('btn-compare');
+                btn.innerHTML = '<div class="spinner !w-4 !h-4 !border-t-white inline-block"></div>';
+                btn.disabled = true;
+                
+                try {
+                    const res = await fetch('/api/compare', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({doc_ids: checked})
+                    });
+                    const data = await res.json();
+                    if(data.error) throw new Error(data.error);
+                    
+                    let ctHtml = data.common_themes.map(t => `<li class="flex items-start gap-2"><svg class="w-4 h-4 mt-1 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg><span>${t}</span></li>`).join('');
+                    let cpHtml = data.contrasting_points.map(t => `<li class="flex items-start gap-2"><svg class="w-4 h-4 mt-1 text-purple-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg><span>${t}</span></li>`).join('');
+                    let caHtml = data.combined_advantages.map(t => `<li class="flex items-start gap-2"><svg class="w-4 h-4 mt-1 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd"></path></svg><span>${t}</span></li>`).join('');
+                    
+                    document.getElementById('compare-body').innerHTML = `
+                        <div class="bg-emerald-50 rounded-xl p-6 border border-emerald-100">
+                            <h4 class="text-xl font-bold text-emerald-900 mb-2">Holistic Summary</h4>
+                            <p class="text-emerald-800 leading-relaxed">${data.holistic_summary}</p>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                                <h4 class="text-lg font-bold text-gray-900 mb-4 border-b pb-2">Common Themes</h4>
+                                <ul class="space-y-3 text-gray-700 text-sm">${ctHtml}</ul>
+                            </div>
+                            <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                                <h4 class="text-lg font-bold text-gray-900 mb-4 border-b pb-2">Contrasting Points</h4>
+                                <ul class="space-y-3 text-gray-700 text-sm">${cpHtml}</ul>
+                            </div>
+                            <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 md:col-span-2">
+                                <h4 class="text-lg font-bold text-gray-900 mb-4 border-b pb-2">Combined Advantages</h4>
+                                <ul class="space-y-3 text-gray-700 text-sm grid grid-cols-1 md:grid-cols-2 gap-3">${caHtml}</ul>
+                            </div>
+                        </div>
+                    `;
+                    
+                    const modal = document.getElementById('compare-modal');
+                    const modalContent = document.getElementById('compare-modal-content');
+                    modal.classList.remove('hidden');
+                    void modal.offsetWidth;
+                    modal.classList.remove('opacity-0');
+                    modalContent.classList.remove('scale-95');
+                } catch(e) {
+                    alert("Error comparing documents. Make sure you don't exceed token limits!");
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = `Compare ${checked.length} Docs`;
+                }
+            });
+            
+            document.getElementById('btn-close-compare').addEventListener('click', () => {
+                const modal = document.getElementById('compare-modal');
+                const modalContent = document.getElementById('compare-modal-content');
+                modal.classList.add('opacity-0');
+                modalContent.classList.add('scale-95');
+                setTimeout(() => modal.classList.add('hidden'), 300);
+            });
+
+            // File Upload via Click
+            const dropZone = document.getElementById("drop-zone");
+            const fileInput = document.getElementById("file-upload");
+            const statusBox = document.getElementById("upload-status");
+
+            dropZone.addEventListener("click", () => fileInput.click());
+
+            fileInput.addEventListener("change", async (e) => {
+                if(e.target.files.length > 0) {
+                    await uploadFile(e.target.files[0]);
+                }
+            });
+
+            // Drag and Drop integration
+            dropZone.addEventListener("dragover", (e) => {
+                e.preventDefault();
+                dropZone.classList.add("border-emerald-500", "bg-emerald-100");
+            });
+            dropZone.addEventListener("dragleave", () => {
+                dropZone.classList.remove("border-emerald-500", "bg-emerald-100");
+            });
+            dropZone.addEventListener("drop", async (e) => {
+                e.preventDefault();
+                dropZone.classList.remove("border-emerald-500", "bg-emerald-100");
+                if(e.dataTransfer.files.length > 0) {
+                    await uploadFile(e.dataTransfer.files[0]);
+                }
+            });
+
+            async function uploadFile(file) {
+                const formData = new FormData();
+                formData.append("file", file);
+                
+                statusBox.classList.remove("hidden");
+                
+                try {
+                    const res = await fetch("/api/upload", {
+                        method: "POST",
+                        body: formData
+                    });
+                    const data = await res.json();
+                    if(data.success) {
+                        window.location.href = `/analysis/${data.doc_id}`;
+                    } else {
+                        alert(data.error || "Upload failed");
+                    }
+                } catch(err) {
+                    alert("Network error.");
+                } finally {
+                    statusBox.classList.add("hidden");
+                }
+            }
+        });
+    </script>
+    
+    <!-- Compare Modal -->
+    <div id="compare-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col transform scale-95 transition-transform duration-300 border border-emerald-100" id="compare-modal-content">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 rounded-t-3xl">
+                <h3 class="text-2xl font-bold text-gray-900">Multi-Document Comparison</h3>
+                <button id="btn-close-compare" class="text-gray-400 hover:text-red-500 transition-colors p-2"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+            </div>
+            <div class="p-8 overflow-y-auto custom-scrollbar flex-grow space-y-6" id="compare-body">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% include 'tret_widget.html' %}
+</body>
+</html>
